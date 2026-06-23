@@ -1,0 +1,616 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "College Discovery API",
+    "version": "1.0.0",
+    "description": "Backend API for the College Discovery Platform"
+  },
+  "servers": [
+    { "url": "/api/v1" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "ErrorEnvelope": {
+        "type": "object",
+        "required": ["success", "error"],
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": { "type": "string", "example": "RESOURCE_NOT_FOUND" },
+              "message": { "type": "string", "example": "College not found" }
+            }
+          }
+        }
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "total": { "type": "integer", "example": 1000 },
+          "page": { "type": "integer", "example": 2 },
+          "limit": { "type": "integer", "example": 20 },
+          "totalPages": { "type": "integer", "example": 50 }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string", "format": "email" }
+        }
+      },
+      "AuthTokens": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string" },
+          "refreshToken": { "type": "string" }
+        }
+      },
+      "CollegeType": {
+        "type": "string",
+        "enum": ["PUBLIC", "PRIVATE", "DEEMED"]
+      },
+      "CollegeListItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "city": { "type": "string" },
+          "state": { "type": "string" },
+          "type": { "$ref": "#/components/schemas/CollegeType" },
+          "rating": { "type": "number", "format": "float" },
+          "annualFees": { "type": "number" },
+          "logoUrl": { "type": "string", "nullable": true }
+        }
+      },
+      "Placements": {
+        "type": "object",
+        "properties": {
+          "averagePackage": { "type": "number" },
+          "highestPackage": { "type": "number" },
+          "placementRate": { "type": "number", "description": "0 to 100" }
+        }
+      },
+      "Course": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "degree": { "type": "string" },
+          "durationYears": { "type": "integer" },
+          "annualFees": { "type": "number" }
+        }
+      },
+      "Review": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "rating": { "type": "number" },
+          "comment": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CollegeDetail": {
+        "allOf": [
+          { "$ref": "#/components/schemas/CollegeListItem" },
+          {
+            "type": "object",
+            "properties": {
+              "about": { "type": "string" },
+              "established": { "type": "integer" },
+              "website": { "type": "string", "nullable": true },
+              "placements": { "$ref": "#/components/schemas/Placements" },
+              "courses": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/Course" }
+              },
+              "reviews": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "array",
+                    "items": { "$ref": "#/components/schemas/Review" },
+                    "description": "5 most recent reviews"
+                  },
+                  "total": { "type": "integer" }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "CollegeCompareItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "city": { "type": "string" },
+          "state": { "type": "string" },
+          "type": { "$ref": "#/components/schemas/CollegeType" },
+          "rating": { "type": "number" },
+          "annualFees": { "type": "number" },
+          "placements": { "$ref": "#/components/schemas/Placements" },
+          "topCourses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "degree": { "type": "string" },
+                "annualFees": { "type": "number" }
+              }
+            }
+          }
+        }
+      },
+      "SavedCollege": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "savedAt": { "type": "string", "format": "date-time" },
+          "college": { "$ref": "#/components/schemas/CollegeListItem" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Register a new user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string", "minLength": 8 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": { "$ref": "#/components/schemas/User" },
+                        "accessToken": { "type": "string" },
+                        "refreshToken": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "USER_ALREADY_EXISTS",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Login and receive tokens",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": { "$ref": "#/components/schemas/User" },
+                        "accessToken": { "type": "string" },
+                        "refreshToken": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_CREDENTIALS",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Rotate access and refresh tokens",
+        "description": "No Authorization header. The refresh token is the credential and is passed in the request body.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": {
+                  "refreshToken": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tokens rotated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/AuthTokens" }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_TOKEN or TOKEN_EXPIRED",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Invalidate refresh token",
+        "description": "No Authorization header. Accepts the refresh token in the body and deletes it from the database. Access token expires naturally via TTL.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": {
+                  "refreshToken": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logged out",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "nullable": true, "example": null }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_TOKEN",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          }
+        }
+      }
+    },
+    "/colleges": {
+      "get": {
+        "tags": ["Colleges"],
+        "summary": "List and search colleges with filters",
+        "parameters": [
+          { "name": "search", "in": "query", "schema": { "type": "string" }, "description": "Fuzzy search on name, city, state" },
+          { "name": "state", "in": "query", "schema": { "type": "string" } },
+          { "name": "city", "in": "query", "schema": { "type": "string" } },
+          { "name": "minFees", "in": "query", "schema": { "type": "number" } },
+          { "name": "maxFees", "in": "query", "schema": { "type": "number" } },
+          { "name": "minRating", "in": "query", "schema": { "type": "number", "minimum": 0, "maximum": 5 } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1, "minimum": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "maximum": 50 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated college list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/CollegeListItem" }
+                    },
+                    "meta": { "$ref": "#/components/schemas/PaginationMeta" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/colleges/compare": {
+      "get": {
+        "tags": ["Colleges"],
+        "summary": "Compare 2 to 3 colleges side by side",
+        "description": "Registered before /colleges/:id to prevent route conflict where 'compare' is captured as an :id param.",
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Comma-separated college ids, 2 to 3 values. Example: clx1abc,clx2def"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comparison data for each college",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/CollegeCompareItem" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_PARAM — fewer than 2 or more than 3 ids",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "404": {
+            "description": "RESOURCE_NOT_FOUND — one or more ids do not exist",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          }
+        }
+      }
+    },
+    "/colleges/{id}": {
+      "get": {
+        "tags": ["Colleges"],
+        "summary": "Get full college detail",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "College detail with courses, placements, and 5 most recent reviews",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/CollegeDetail" }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "RESOURCE_NOT_FOUND",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          }
+        }
+      }
+    },
+    "/colleges/{id}/reviews": {
+      "get": {
+        "tags": ["Colleges"],
+        "summary": "Get paginated reviews for a college",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "maximum": 50 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated reviews",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Review" }
+                    },
+                    "meta": { "$ref": "#/components/schemas/PaginationMeta" }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "RESOURCE_NOT_FOUND",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          }
+        }
+      }
+    },
+    "/me/saved-colleges": {
+      "get": {
+        "tags": ["Activity"],
+        "summary": "List user saved colleges",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Saved colleges",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/SavedCollege" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Activity"],
+        "summary": "Save a college",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["collegeId"],
+                "properties": {
+                  "collegeId": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "College saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "collegeId": { "type": "string" },
+                        "savedAt": { "type": "string", "format": "date-time" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "404": {
+            "description": "RESOURCE_NOT_FOUND",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "409": {
+            "description": "ALREADY_SAVED",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          }
+        }
+      }
+    },
+    "/me/saved-colleges/{collegeId}": {
+      "delete": {
+        "tags": ["Activity"],
+        "summary": "Remove a saved college",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "collegeId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Removed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "nullable": true, "example": null }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "404": {
+            "description": "RESOURCE_NOT_FOUND",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          }
+        }
+      }
+    }
+  }
+}
