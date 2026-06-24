@@ -1,0 +1,110 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                String              @id @default(cuid())
+  name              String
+  email             String              @unique
+  password          String              // hashed
+  refreshTokens     RefreshToken[]
+  savedColleges     SavedCollege[]
+  savedComparisons  SavedComparison[]
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+}
+
+model RefreshToken {
+  id          String   @id @default(cuid())
+  tokenHash   String   @unique
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+}
+
+model College {
+  id              String          @id @default(cuid())
+  name            String
+  about           String?
+  city            String
+  state           String
+  type            CollegeType
+  annualFees      Int
+  logoUrl         String?
+  website         String?
+  established     Int?
+  avgPackage      Int
+  highestPackage  Int
+  placementRate   Float
+  searchVector    Unsupported("tsvector")?   // for full‑text search
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  courses         Course[]
+  reviews         Review[]
+  savedBy         SavedCollege[]
+
+  @@index([searchVector], type: Gin)
+  @@index([state, city, annualFees])
+}
+
+enum CollegeType {
+  PUBLIC
+  PRIVATE
+  DEEMED
+}
+
+model Course {
+  id            String   @id @default(cuid())
+  collegeId     String
+  college       College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  name          String
+  degree        String
+  durationYears Int
+  annualFees    Int
+  createdAt     DateTime @default(now())
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  collegeId   String
+  college     College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  rating      Float
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  @@index([collegeId])
+  @@index([collegeId, createdAt(sort: Desc)])
+}
+
+model SavedCollege {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collegeId   String
+  college     College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, collegeId])
+  @@index([userId])
+}
+
+model SavedComparison {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collegeIds  Json     // stores array of college id strings (2–3 values)
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}

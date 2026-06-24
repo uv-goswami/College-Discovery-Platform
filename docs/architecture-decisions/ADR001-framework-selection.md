@@ -1,18 +1,28 @@
-# ADR-001: Backend Framework — NestJS
+# ADR-001: Backend Framework Selection
+
+## Status
+Accepted – Implemented
+
+## Context
+I needed to choose a backend framework for the College Discovery Platform. The assignment allowed either NestJS or Next.js API Routes. I had to pick one that would support the required features (search, pagination, authentication, database operations) while keeping the code maintainable.
 
 ## Decision
-Use NestJS as the backend framework.
+I chose **NestJS**.
 
-## Reasons
-- Prescribed in the assignment (NestJS or Next.js API Routes)
-- Module system maps directly onto bounded contexts
-- Built-in DI, guards, interceptors, and pipes reduce boilerplate
-- `@nestjs/swagger` generates OpenAPI spec from decorators — no drift
+## Why
+- NestJS has a **module system** – I could separate features (Auth, Colleges, Saved Items) into clean, independent modules.
+- It provides **built‑in Dependency Injection**, which makes testing easier and keeps services decoupled.
+- It has **Guards** (for authentication), **Interceptors** (for response formatting), and **Pipes** (for validation) – reducing boilerplate.
+- The assignment specifically mentioned NestJS as a preferred option.
 
 ## Alternatives Considered
-**Next.js API Routes** — flat route handlers, no DI, no guard/interceptor lifecycle.
-Technically compliant but architecturally weak for a backend-only role.
+**Next.js API Routes**  
+- Simpler, but lacks a built‑in DI container and global interceptor pipeline.  
+- Would have been harder to enforce consistent error/response formatting across all endpoints.
 
 ## Consequences
-- Decorator-heavy code; unfamiliar to developers outside Angular/NestJS ecosystem
-- DI container adds indirection — mitigated by keeping modules small and focused
+- I had to learn decorator‑based syntax (`@Controller`, `@Injectable`, etc.), which was new to me.  
+- The DI container adds a layer of indirection, but I kept modules small to avoid confusion.
+
+## Date
+2026-06-22

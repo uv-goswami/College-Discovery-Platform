@@ -32,13 +32,13 @@
           }
         }
       },
-      "PaginationMeta": {
+      "PageMeta": {
         "type": "object",
         "properties": {
-          "total": { "type": "integer", "example": 1000 },
+          "total": { "type": "integer", "example": 100 },
           "page": { "type": "integer", "example": 2 },
           "limit": { "type": "integer", "example": 20 },
-          "totalPages": { "type": "integer", "example": 50 }
+          "totalPages": { "type": "integer", "example": 5 }
         }
       },
       "User": {
@@ -115,15 +115,9 @@
                 "items": { "$ref": "#/components/schemas/Course" }
               },
               "reviews": {
-                "type": "object",
-                "properties": {
-                  "data": {
-                    "type": "array",
-                    "items": { "$ref": "#/components/schemas/Review" },
-                    "description": "5 most recent reviews"
-                  },
-                  "total": { "type": "integer" }
-                }
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/Review" },
+                "description": "5 most recent reviews"
               }
             }
           }
@@ -159,6 +153,19 @@
           "id": { "type": "string" },
           "savedAt": { "type": "string", "format": "date-time" },
           "college": { "$ref": "#/components/schemas/CollegeListItem" }
+        }
+      },
+      "SavedComparison": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "savedAt": { "type": "string", "format": "date-time" },
+          "collegeIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 2,
+            "maxItems": 3
+          }
         }
       }
     }
@@ -273,7 +280,7 @@
       "post": {
         "tags": ["Auth"],
         "summary": "Rotate access and refresh tokens",
-        "description": "No Authorization header. The refresh token is the credential and is passed in the request body.",
+        "description": "Refresh token is passed in the request body (not in Authorization header).",
         "requestBody": {
           "required": true,
           "content": {
@@ -314,7 +321,7 @@
       "post": {
         "tags": ["Auth"],
         "summary": "Invalidate refresh token",
-        "description": "No Authorization header. Accepts the refresh token in the body and deletes it from the database. Access token expires naturally via TTL.",
+        "description": "Accepts the refresh token in the body and deletes it from the database.",
         "requestBody": {
           "required": true,
           "content": {
@@ -354,7 +361,7 @@
     "/colleges": {
       "get": {
         "tags": ["Colleges"],
-        "summary": "List and search colleges with filters",
+        "summary": "List and search colleges with filters (offset pagination)",
         "parameters": [
           { "name": "search", "in": "query", "schema": { "type": "string" }, "description": "Fuzzy search on name, city, state" },
           { "name": "state", "in": "query", "schema": { "type": "string" } },
@@ -378,7 +385,7 @@
                       "type": "array",
                       "items": { "$ref": "#/components/schemas/CollegeListItem" }
                     },
-                    "meta": { "$ref": "#/components/schemas/PaginationMeta" }
+                    "meta": { "$ref": "#/components/schemas/PageMeta" }
                   }
                 }
               }
@@ -391,7 +398,7 @@
       "get": {
         "tags": ["Colleges"],
         "summary": "Compare 2 to 3 colleges side by side",
-        "description": "Registered before /colleges/:id to prevent route conflict where 'compare' is captured as an :id param.",
+        "description": "Registered before /colleges/:id to prevent route conflict.",
         "parameters": [
           {
             "name": "ids",
@@ -433,7 +440,7 @@
     "/colleges/{id}": {
       "get": {
         "tags": ["Colleges"],
-        "summary": "Get full college detail",
+        "summary": "Get full college detail with 5 most recent reviews",
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
@@ -462,10 +469,10 @@
     "/colleges/{id}/reviews": {
       "get": {
         "tags": ["Colleges"],
-        "summary": "Get paginated reviews for a college",
+        "summary": "Get paginated reviews for a college (offset pagination)",
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1, "minimum": 1 } },
           { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "maximum": 50 } }
         ],
         "responses": {
@@ -481,7 +488,7 @@
                       "type": "array",
                       "items": { "$ref": "#/components/schemas/Review" }
                     },
-                    "meta": { "$ref": "#/components/schemas/PaginationMeta" }
+                    "meta": { "$ref": "#/components/schemas/PageMeta" }
                   }
                 }
               }
@@ -585,6 +592,136 @@
         "security": [{ "bearerAuth": [] }],
         "parameters": [
           { "name": "collegeId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Removed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "nullable": true, "example": null }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "404": {
+            "description": "RESOURCE_NOT_FOUND",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          }
+        }
+      }
+    },
+    "/me/saved-comparisons": {
+      "get": {
+        "tags": ["Activity"],
+        "summary": "List user saved comparisons",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Saved comparisons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/SavedComparison" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Activity"],
+        "summary": "Save a comparison (2–3 college IDs)",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["collegeIds"],
+                "properties": {
+                  "collegeIds": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "minItems": 2,
+                    "maxItems": 3
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Comparison saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "collegeIds": {
+                          "type": "array",
+                          "items": { "type": "string" }
+                        },
+                        "savedAt": { "type": "string", "format": "date-time" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "400": {
+            "description": "INVALID_PARAM",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "404": {
+            "description": "RESOURCE_NOT_FOUND",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "409": {
+            "description": "ALREADY_SAVED (same combination already exists)",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          }
+        }
+      }
+    },
+    "/me/saved-comparisons/{comparisonId}": {
+      "delete": {
+        "tags": ["Activity"],
+        "summary": "Remove a saved comparison",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "comparisonId", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
         "responses": {
           "200": {

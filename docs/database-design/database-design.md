@@ -99,9 +99,25 @@ User's saved colleges. Unique per user-college pair.
 Unique constraint: `(user_id, college_id)`
 Index: `user_id`
 
+### saved_comparisons
+User's saved comparisons (each stores 2–3 college IDs).
+
+| Column      | Type     | Constraints                      |
+|-------------|----------|----------------------------------|
+| id          | String   | PK, CUID                         |
+| user_id     | String   | FK → users.id CASCADE            |
+| college_ids | JSON     | NOT NULL (array of college IDs)  |
+| created_at  | DateTime | DEFAULT now()                    |
+
+Index: `user_id`
+Constraint: ensure array length between 2 and 3 (application-level).
+Note: There is no FK constraint on individual college_ids for simplicity;
+existence of each college is validated at the application layer.
+
 ## Relationships
 - users → refresh_tokens: one-to-many
 - users → saved_colleges: one-to-many
+- users → saved_comparisons: one-to-many
 - colleges → saved_colleges: one-to-many
 - colleges → courses: one-to-many
 - colleges → reviews: one-to-many
@@ -113,3 +129,4 @@ Index: `user_id`
 - Reviews anonymous in MVP — user_id added as nullable FK when needed
 - All monetary values in INR as integers — no float precision issues
 - CUID for all primary keys
+- `saved_comparisons.college_ids` stored as JSON array to allow variable length (2–3) without a junction table.

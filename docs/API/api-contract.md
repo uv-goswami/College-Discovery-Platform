@@ -46,10 +46,8 @@ Error:
 
 ## Pagination
 
-Cursor-based. Cursor is the `id` of the last item in the previous response.
-On first request, omit cursor. Pass `meta.nextCursor` from previous response
-as the `cursor` param on the next request. `meta.hasMore: false` means no
-further pages exist.
+Offset-based pagination. Clients request a `page` (starting at 1) and a `limit` (default 20, max 50).  
+The response `meta` contains `total`, `page`, `limit`, and `totalPages`.
 
 ---
 
@@ -116,7 +114,12 @@ Errors: 401 INVALID_CREDENTIALS, 422 VALIDATION_ERROR
 
 #### POST /auth/refresh
 
-Header: Authorization: Bearer <refresh_token>
+**Refresh token is passed in the request body**, not in the Authorization header.
+
+Request:
+{
+  "refreshToken": "string"
+}
 
 Response 200:
 {
@@ -133,7 +136,13 @@ Errors: 401 INVALID_TOKEN, 401 TOKEN_EXPIRED
 
 #### POST /auth/logout
 
-Header: Authorization: Bearer <access_token>
+**Refresh token is passed in the request body** (access token is not required).  
+The refresh token is invalidated.
+
+Request:
+{
+  "refreshToken": "string"
+}
 
 Response 200:
 {
@@ -141,7 +150,7 @@ Response 200:
   "data": null
 }
 
-Errors: 401 UNAUTHORIZED
+Errors: 401 INVALID_TOKEN (if token is malformed or expired, still returns 200 for security)
 
 ---
 
@@ -158,7 +167,7 @@ Query params:
   minFees?   number   Annual fees lower bound
   maxFees?   number   Annual fees upper bound
   minRating? number   0.0 to 5.0
-  cursor?    string   Pagination cursor (opaque — pass as received)
+  page?      number   Default 1
   limit?     number   Default 20, max 50
 
 Response 200:
@@ -177,9 +186,10 @@ Response 200:
     }
   ],
   "meta": {
-    "nextCursor": "string | null",
+    "total": "number",
+    "page": "number",
     "limit": "number",
-    "hasMore": "boolean"
+    "totalPages": "number"
   }
 }
 
@@ -264,7 +274,37 @@ Response 200:
         "comment": "string",
         "createdAt": "string (ISO 8601)"
       }
-    ]
+    ]  // Only the 5 most recent reviews are embedded.
+  }
+}
+
+Errors: 404 RESOURCE_NOT_FOUND
+
+---
+
+#### GET /colleges/:id/reviews
+
+Returns paginated reviews for a college (separate endpoint).
+Query params:
+  page?    number   Default 1
+  limit?   number   Default 20, max 50
+
+Response 200:
+{
+  "success": true,
+  "data": [
+    {
+      "id": "string",
+      "rating": "number",
+      "comment": "string",
+      "createdAt": "string (ISO 8601)"
+    }
+  ],
+  "meta": {
+    "total": "number",
+    "page": "number",
+    "limit": "number",
+    "totalPages": "number"
   }
 }
 
@@ -343,7 +383,7 @@ Response 200:
     {
       "id": "string",
       "savedAt": "string (ISO 8601)",
-      "collegeIds": ["string"]
+      "collegeIds": ["string", "string"]  // 2–3 college ids
     }
   ]
 }
@@ -356,7 +396,7 @@ Errors: 401 UNAUTHORIZED
 
 Request:
 {
-  "collegeIds": ["string", "string"]
+  "collegeIds": ["string", "string"]  // 2–3 ids
 }
 
 Response 201:
@@ -364,12 +404,13 @@ Response 201:
   "success": true,
   "data": {
     "id": "string",
-    "collegeIds": ["string"],
+    "collegeIds": ["string", "string"],
     "savedAt": "string (ISO 8601)"
   }
 }
 
 Errors: 401 UNAUTHORIZED, 400 INVALID_PARAM, 404 RESOURCE_NOT_FOUND, 409 ALREADY_SAVED
+(ALREADY_SAVED if the same combination already exists for this user)
 
 ---
 

@@ -1,35 +1,40 @@
-# Dependencies
+# Node.js
 node_modules/
-.pnp
-.pnp.js
-
-# Build artefacts
-dist/
-build/
-.next/
-
-# Environment files  ← NEVER commit secrets
-.env
-.env.local
-.env.*.local
-.env.production
-
-# Prisma generated client (regenerated on install)
-prisma/generated/
-
-# OS / editor noise
-.DS_Store
-Thumbs.db
-.idea/
-.vscode/settings.json
-*.swp
-*.swo
-
-# Logs
-*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Prisma generated client
+generated/
+prisma/generated/
+.prisma/
 
 # Test coverage
 coverage/
@@ -39,3 +44,7 @@ coverage/
 tmp/
 temp/
 
+# Misc
+*.pem
+*.crt
+*.key
