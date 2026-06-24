@@ -1,4 +1,3 @@
-
 # College Discovery Platform - Backend
 
 This is the backend service for the College Discovery Platform, a RESTful API built with NestJS, Prisma, and PostgreSQL. It provides user authentication, college search with filters, comparison between colleges, and user-scoped saved items.

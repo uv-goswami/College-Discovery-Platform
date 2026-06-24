@@ -1,10 +1,10 @@
 # ADR-008: Pagination Strategy – Offset Pagination
 
 ## Status
-Accepted – Implemented (initially cursor‑based, then switched)
+✅ Accepted – Implemented
 
 ## Context
-The college listing endpoint needed pagination. I initially considered cursor‑based pagination (using `nextCursor`) but switched to offset‑based (`page` + `limit`) after realising it’s simpler for MVP.
+The college listing endpoint needed pagination. I initially considered cursor-based pagination but switched to offset-based (`page` + `limit`) after realising it’s simpler for MVP and provides the `total` count needed for UI controls.
 
 ## Decision
 I used **offset‑based pagination** with `page`, `limit`, `total`, and `totalPages` in the response metadata.
@@ -19,8 +19,8 @@ I used **offset‑based pagination** with `page`, `limit`, `total`, and `totalPa
 - **Limit/Offset** – simpler, but becomes inefficient for very large datasets.
 
 ## Consequences
-- The API contract had to be updated to reflect `page` instead of `cursor`.
+- The API contract was updated to reflect `page` instead of `cursor`.
 - The `meta` object now returns `total`, `page`, `limit`, `totalPages`.
 
 ## Date
-2026-06-24 (switched)
+2026-06-24
