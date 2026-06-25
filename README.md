@@ -91,7 +91,7 @@ Populate the database with sample data:
 npx prisma db seed
 ```
 
-The seed creates a test user (`test@student.com` / `Password123!`) and 10 colleges with reviews and a saved comparison.
+The seed creates a test user (`test@student.com` / `Password123!`) and 50 colleges with reviews and a saved comparison.
 
 ### Run the Server
 
@@ -168,6 +168,11 @@ curl -X POST http://localhost:3000/api/v1/me/saved-colleges \
 ```
 
 Full API documentation is available in `docs/API/api-contract.md` and `docs/API/openapi.json`.
+or
+```
+https://college-discovery-backend-vfql.onrender.com/api/docs
+
+```
 
 ---
 
@@ -176,10 +181,8 @@ Full API documentation is available in `docs/API/api-contract.md` and `docs/API/
 The application is deployed on Render (or similar platform). The live base URL is:
 
 ```
-https://<your-app-name>.onrender.com/api/v1
+https://college-discovery-backend-vfql.onrender.com/api/v1/colleges
 ```
-
-All environment variables must be set on the hosting platform.
 
 ---
 
