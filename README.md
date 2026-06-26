@@ -205,5 +205,4 @@ npm run test:cov
 ## License
 ```
 
-This project was created as part of an internship assignment for evaluation purposes only. It is not intended for commercial use or distribution. All rights reserved.
 ```
